@@ -1,1 +1,31 @@
 # Requirements for Hale LLM
+
+# Core dependencies for Meta's original implementation
+torch>=2.0.0
+fairscale>=0.4.0
+tiktoken>=0.5.0
+pydantic>=2.0
+Pillow>=9.0
+termcolor>=2.0
+fire>=0.5.0
+packaging>=23.0
+numpy>=1.24.0
+
+# For Hugging Face compatibility and fine-tuning
+transformers>=4.35.0
+datasets>=2.14.0
+accelerate>=0.24.0
+peft>=0.7.0
+bitsandbytes>=0.41.0  # For QLoRA 4-bit quantization
+
+# Optional: For distributed training
+# fairscale already covers this
+
+# Optional: For monitoring
+# wandb
+# tensorboard
+
+# Development dependencies
+# pytest
+# black
+# isort
