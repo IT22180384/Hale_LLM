@@ -1,0 +1,71 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# PyTorch/Model checkpoints
+*.pth
+*.bin
+*.safetensors
+checkpoints/
+*.ckpt
+
+# Model files (large files)
+*.model
+consolidated*.pth
+params.json
+tokenizer.model
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Database
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# HuggingFace cache
+.cache/
+huggingface/
+
+# Torch distributed temp files
+torch_dist/
