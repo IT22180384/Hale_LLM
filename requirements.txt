@@ -1,5 +1,8 @@
 # Requirements for Hale LLM
 
+# Llama Models CLI (for downloading and managing models)
+llama-models>=0.3.0
+
 # Core dependencies for Meta's original implementation
 torch>=2.0.0
 fairscale>=0.4.0
@@ -17,6 +20,18 @@ datasets>=2.14.0
 accelerate>=0.24.0
 peft>=0.7.0
 bitsandbytes>=0.41.0  # For QLoRA 4-bit quantization
+huggingface-hub>=0.20.0  # For downloading from HF
+
+# API Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# HTTP and utilities
+httpx>=0.25.0
+requests>=2.26.0
+tqdm>=4.65.0
+rich>=13.0.0
 
 # Optional: For distributed training
 # fairscale already covers this
