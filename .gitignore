@@ -57,6 +57,10 @@ Thumbs.db
 *.db
 *.sqlite
 
+# Allow dataset files in data folder
+!data/*.jsonl
+!data/**/*.jsonl
+
 # Temporary files
 *.tmp
 *.temp
