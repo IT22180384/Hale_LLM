@@ -16,8 +16,8 @@ def main():
     print("=" * 70)
     print()
     print("Starting server...")
-    print("API will be available at: http://localhost:8000")
-    print("API docs at: http://localhost:8000/docs")
+    print("API will be available at: http://localhost:6161")
+    print("API docs at: http://localhost:6161/docs")
     print()
     print("Press CTRL+C to stop the server")
     print("=" * 70)
@@ -27,7 +27,7 @@ def main():
     uvicorn.run(
         "chatbot_api:app",
         host="0.0.0.0",
-        port=8000,
+        port=6161,
         reload=True,  # Auto-reload on code changes
         log_level="info"
     )
