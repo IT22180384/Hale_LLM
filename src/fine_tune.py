@@ -180,11 +180,14 @@ def setup_model_and_tokenizer(
         )
         model = prepare_model_for_kbit_training(model)
     else:
+        # For Mac/CPU training, use CPU explicitly to avoid MPS issues
+        device = "cpu" if not torch.cuda.is_available() else "auto"
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
+            torch_dtype=torch.float32 if device == "cpu" else torch.bfloat16,
+            device_map=device,
             trust_remote_code=True,
+            low_cpu_mem_usage=True,
         )
 
     # LoRA config
