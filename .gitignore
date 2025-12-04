@@ -24,6 +24,11 @@ dist/
 checkpoints/
 *.ckpt
 
+# Model files (do not commit - too large)
+src/models/
+phi_pitt_lora_final/
+models/
+
 # Model files (large files)
 *.model
 consolidated*.pth

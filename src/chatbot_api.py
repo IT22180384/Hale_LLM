@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
 from pathlib import Path
 import uuid
 import sys
@@ -25,7 +26,8 @@ app = FastAPI(
 )
 
 # Configuration
-MODEL_PATH = Path.home() / ".llama" / "checkpoints" / "Llama3.1-8B-Instruct"
+BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
+ADAPTER_PATH = Path(__file__).parent / "models" / "phi_pitt_lora_final"
 MAX_MEMORY_TURNS = 10  # Keep last 10 conversation turns
 MAX_NEW_TOKENS = 256
 TEMPERATURE = 0.7
@@ -87,66 +89,73 @@ class ConversationHistory(BaseModel):
 
 
 def load_model():
-    """Load the Llama model and tokenizer"""
+    """Load the fine-tuned Llama model with LoRA adapter (Mac optimized)"""
     global model, tokenizer
 
-    print(f"Loading model from {MODEL_PATH}...")
+    print("🤖 Loading fine-tuned model with LoRA adapter...")
 
-    # Check if it's Meta's official format (.pth files)
-    if (MODEL_PATH / "consolidated.00.pth").exists():
-        print("✓ Detected Meta's official .pth format")
-        try:
-            from simple_meta_loader import SimpleMetaLlama
-            print("Loading with Meta's official implementation...")
-            
-            model = SimpleMetaLlama(
-                ckpt_dir=str(MODEL_PATH),
-                max_seq_len=2048,
-                max_batch_size=1
-            )
-            tokenizer = None  # Built into SimpleMetaLlama
-            return
-            
-        except Exception as e:
-            print(f"Error loading Meta format: {e}")
-            print("\nFalling back to HuggingFace...")
-            import traceback
-            traceback.print_exc()
-
-    # Fallback to HuggingFace format (requires login for gated models)
-    print("Loading model with HuggingFace Transformers...")
-    print("Note: Llama models require HuggingFace authentication")
-    
     try:
-        # Try to load from local HF cache or online
-        tokenizer = AutoTokenizer.from_pretrained(
-            "meta-llama/Llama-3.1-8B-Instruct",
-            trust_remote_code=True
-        )
+        # Determine device (Mac uses CPU, GPU systems use CUDA)
+        if torch.cuda.is_available():
+            device = "cuda"
+            dtype = torch.bfloat16
+            # Use quantization only on GPU
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+            )
+            print("📥 Loading base model (GPU mode with 4-bit quantization)...")
+        else:
+            device = "cpu"
+            dtype = torch.float32
+            bnb_config = None
+            print("📥 Loading base model (CPU mode - Mac)...")
 
-        print("Loading model weights... (this may take a few minutes)")
-        model = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-3.1-8B-Instruct",
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            trust_remote_code=True,
-            low_cpu_mem_usage=True
-        )
+        # Load base model
+        if bnb_config:
+            model = AutoModelForCausalLM.from_pretrained(
+                BASE_MODEL,
+                quantization_config=bnb_config,
+                device_map="auto",
+                trust_remote_code=True,
+            )
+        else:
+            model = AutoModelForCausalLM.from_pretrained(
+                BASE_MODEL,
+                torch_dtype=dtype,
+                device_map=device,
+                trust_remote_code=True,
+                low_cpu_mem_usage=True,
+            )
 
-        print("✓ Model loaded successfully")
+        # Load tokenizer
+        print("📖 Loading tokenizer...")
+        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "right"
+
+        # Load LoRA adapter
+        print(f"🎯 Loading LoRA adapter from {ADAPTER_PATH}")
+        model = PeftModel.from_pretrained(model, str(ADAPTER_PATH))
+
+        print("✅ Model loaded successfully!")
 
     except Exception as e:
-        print(f"Error loading model: {e}")
+        print(f"❌ Error loading model: {e}")
         print("\n" + "="*70)
         print("SETUP REQUIRED:")
         print("="*70)
-        print("\n1. Accept the license:")
-        print("   https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct")
-        print("\n2. Get your HuggingFace token:")
+        print("\n1. Make sure the LoRA adapter exists at:")
+        print(f"   {ADAPTER_PATH}")
+        print("\n2. Accept the LLaMA license:")
+        print("   https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct")
+        print("\n3. Get your HuggingFace token:")
         print("   https://huggingface.co/settings/tokens")
-        print("\n3. Login using:")
+        print("\n4. Login using:")
         print("   huggingface-cli login")
-        print("\n4. Restart the server")
+        print("\n5. Restart the server")
         print("="*70)
         raise
 
@@ -190,14 +199,9 @@ def format_chat_prompt(messages: List[Dict]) -> str:
 
 
 def generate_response(messages: List[Dict], max_tokens: int, temperature: float) -> str:
-    """Generate response using the model"""
+    """Generate response using the fine-tuned model"""
 
-    # Check if using SimpleMetaLlama (Meta format)
-    if hasattr(model, 'generate') and tokenizer is None:
-        return model.generate(messages, max_gen_len=max_tokens, temperature=temperature)
-
-    # HuggingFace transformers
-    # Format messages into chat template
+    # Format messages into Llama 3 chat template
     prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
@@ -207,7 +211,7 @@ def generate_response(messages: List[Dict], max_tokens: int, temperature: float)
     # Tokenize
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
-    # Generate
+    # Generate with fine-tuned model
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
