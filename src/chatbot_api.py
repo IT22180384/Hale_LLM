@@ -27,7 +27,11 @@ app = FastAPI(
 
 # Configuration
 BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
-ADAPTER_PATH = Path(__file__).parent / "models" / "phi_pitt_lora_final"
+# ADAPTER_PATH can be either local path or HuggingFace model ID
+# Set via environment variable ADAPTER_MODEL_ID or use local path
+import os
+ADAPTER_MODEL_ID = os.getenv("ADAPTER_MODEL_ID", None)
+ADAPTER_PATH = ADAPTER_MODEL_ID if ADAPTER_MODEL_ID else (Path(__file__).parent / "models" / "phi_pitt_lora_final")
 MAX_MEMORY_TURNS = 10  # Keep last 10 conversation turns
 MAX_NEW_TOKENS = 256
 TEMPERATURE = 0.7
