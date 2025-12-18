@@ -27,7 +27,7 @@ def main():
     uvicorn.run(
         "chatbot_api:app",
         host="0.0.0.0",
-        port=6161,
+        port=7860,
         reload=True,  # Auto-reload on code changes
         log_level="info"
     )
